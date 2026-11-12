@@ -58,7 +58,16 @@ Edit ID3 tags in a spreadsheet-style table, drop in cover art from any image for
 | **Cover art** | Saved as the *front cover* picture, baseline JPEG, max 500×500. A small baseline JPEG is kept exactly as it is. |
 | **Other data** | Frames the editor doesn't show (ReplayGain, iTunes data, other pictures…) are kept. An existing ID3v1 tag is updated to match. |
 
-## Getting started
+## Download
+
+Get the latest version from the [Releases page](https://github.com/vincentrathbone-web/mp3-tag-editor/releases/latest):
+
+- **`MP3-Tag-Editor-0.9.0-Setup.exe`** installs the app with Start menu and desktop shortcuts, and an uninstaller.
+- **`MP3-Tag-Editor-0.9.0-portable.exe`** runs as is, with no install needed.
+
+The files aren't code-signed yet, so Windows SmartScreen may say *"Windows protected your PC"*. Click **More info → Run anyway**.
+
+## Building from source
 
 ### Requirements
 
@@ -80,6 +89,12 @@ wails build -trimpath -ldflags "-s -w"
 ```
 
 The app is written to `build\bin\MP3 Tag Editor.exe`. It's a single file of about 17 MB, with no installer needed.
+
+To also build the installer, install [NSIS](https://nsis.sourceforge.io/) (so `makensis` is on your PATH) and add `-nsis`:
+
+```bash
+wails build -trimpath -ldflags "-s -w" -nsis
+```
 
 ### Develop
 

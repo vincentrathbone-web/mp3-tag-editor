@@ -11,8 +11,10 @@
     "email": ""
   },
   "info": {
+    "companyName": "vincentrathbone-web",
     "productName": "MP3 Tag Editor",
-    "productVersion": "1.0.0",
+    "copyright": "© 2026 vincentrathbone-web",
+    "productVersion": "0.9.0",
     "comments": "Edit MP3 tags and cover art"
   }
 }
