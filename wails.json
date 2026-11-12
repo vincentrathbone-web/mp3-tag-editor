@@ -1,0 +1,18 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "mp3-tag-editor",
+  "outputfilename": "MP3 Tag Editor",
+  "frontend:install": "npm install",
+  "frontend:build": "npm run build",
+  "frontend:dev:watcher": "npm run dev",
+  "frontend:dev:serverUrl": "auto",
+  "author": {
+    "name": "",
+    "email": ""
+  },
+  "info": {
+    "productName": "MP3 Tag Editor",
+    "productVersion": "1.0.0",
+    "comments": "Edit MP3 tags and cover art"
+  }
+}

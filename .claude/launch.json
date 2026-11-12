@@ -1,0 +1,15 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "wails-dev",
+      "runtimeExecutable": "powershell",
+      "runtimeArgs": [
+        "-NoProfile",
+        "-Command",
+        "$env:Path = 'D:\\Dev\\toolshed\\go\\bin;D:\\Dev\\toolshed\\gopath\\bin;' + $env:Path; $env:WAILS_DEV_ALLOWED_HOSTS = 'wails.localhost'; wails dev"
+      ],
+      "port": 34115
+    }
+  ]
+}
