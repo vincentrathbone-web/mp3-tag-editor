@@ -72,6 +72,12 @@ func TestMakeSamples(t *testing.T) {
 		// Only the first file is written with the big cover, so the tag size stays small for the others.
 		write(fmt.Sprintf(`Mira Okafor\Glass Season\0%d %s.mp3`, i+1, title), frames, i != 0, 1800)
 	}
+	for i, title := range []string{"Rust Belt Lullaby", "Copper Hours", "Low Light Freight", "Tin Roof Weather"} {
+		write(fmt.Sprintf(`The Lowland Static\Copper Hours\%02d %s.mp3`, i+1, title), []rawFrame{
+			textFrame("TIT2", title), textFrame("TPE1", "The Lowland Static"), textFrame("TALB", "Copper Hours"),
+			textFrame("TRCK", fmt.Sprintf("%d/4", i+1)), textFrame("TYER", "2019"), textFrame("TCON", "Alternative"),
+		}, false, 2100+i*150)
+	}
 	write(`Downloads\track07.mp3`, nil, false, 900)
 	write(`Downloads\Demo 3 (final) FINAL.mp3`, []rawFrame{textFrame("TIT2", "Demo 3 (final) FINAL"), textFrame("TPE1", "Unknown artist")}, false, 700)
 	t.Logf("sample files written to %s", dir)
