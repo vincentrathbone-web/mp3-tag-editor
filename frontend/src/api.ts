@@ -1,7 +1,7 @@
 // The Go functions the page can call, plus a few helpers about where the page runs.
 export {
   ConvertCoverData, ConvertCoverFile, GetCover, LoadPaths, PickCover, PickFiles, PickFolder,
-  SaveTrack, SetUnsavedCount,
+  RenameFile, SaveTrack, SetUnsavedCount,
 } from '../wailsjs/go/main/App'
 export { EventsOn, OnFileDrop, OnFileDropOff } from '../wailsjs/runtime/runtime'
 

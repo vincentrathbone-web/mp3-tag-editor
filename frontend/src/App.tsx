@@ -1,19 +1,25 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ConvertCoverData, ConvertCoverFile, EventsOn, GetCover, IMAGE_EXT, LoadPaths, OnFileDrop, OnFileDropOff,
-  PickCover, PickFiles, PickFolder, SaveTrack, SetUnsavedCount, errorText, isDesktop, readAsDataURL,
+  PickCover, PickFiles, PickFolder, RenameFile, SaveTrack, SetUnsavedCount, errorText, isDesktop, readAsDataURL,
 } from './api'
 import ColumnsMenu from './components/ColumnsMenu'
 import DropBlock from './components/DropBlock'
 import EditInput from './components/EditInput'
 import FileTable from './components/FileTable'
+import RenameDialog, { RenameItem } from './components/RenameDialog'
 import SidePane from './components/SidePane'
 import Toast, { ToastData } from './components/Toast'
 import { DEFAULT_COLUMNS, FIELD, GENRES } from './fields'
-import { IconClose, IconMusic, IconPlus, IconRemove, IconSave, IconSearch, IconUndo } from './icons'
+import { IconClose, IconMusic, IconPlus, IconRemove, IconRename, IconSave, IconSearch, IconUndo } from './icons'
 import { Cover, Editing, Row, Track, fmtBytes, isDirty, plural, val } from './model'
 
 const COLS_KEY = 'mp3te.columns'
+const FORMAT_KEY = 'mp3te.renameFormat'
+
+function loadFormat(): string {
+  try { return localStorage.getItem(FORMAT_KEY) || '[Title] - [#] - [Artist]' } catch { return '[Title] - [#] - [Artist]' }
+}
 
 function loadColumns(): string[] {
   try {
@@ -50,6 +56,10 @@ export default function App() {
   const [filter, setFilter] = useState('')
   const [cols, setColsState] = useState<string[]>(loadColumns)
   const [dialog, setDialog] = useState(false)
+  const [renaming, setRenaming] = useState(false)
+  const [renameFormat, setRenameFormat] = useState(loadFormat)
+  const dialogOpen = useRef(false)
+  dialogOpen.current = dialog || renaming
   const [busy, setBusy] = useState<string | null>(null)
   const busyRef = useRef(false)
   const [coverBusy, setCoverBusy] = useState(false)
@@ -105,7 +115,7 @@ export default function App() {
     const v = editValue.current.trim()
     setRows(rs => {
       const tg = rs.filter(r => ed.ids.includes(r.id))
-      const mixed = ed.where === 'pane' && new Set(tg.map(r => val(r, ed.key))).size > 1
+      const mixed = new Set(tg.map(r => val(r, ed.key))).size > 1
       if (mixed && v === '') return rs // left empty: every file keeps its own value
       let changed = false
       const next = rs.map(r => {
@@ -147,10 +157,12 @@ export default function App() {
   const onEditKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
     const ed = editingRef.current
     if (!ed) return
+    // Moving to the next cell only makes sense when editing one file.
+    const single = ed.where === 'table' && ed.ids.length === 1
     if (e.key === 'Enter') {
       e.preventDefault()
       commitEdit()
-      if (ed.where === 'table') moveEdit(ed, 0, 1)
+      if (single) moveEdit(ed, 0, 1)
     } else if (e.key === 'Escape') {
       e.preventDefault()
       e.stopPropagation()
@@ -158,14 +170,34 @@ export default function App() {
     } else if (e.key === 'Tab' && ed.where === 'table') {
       e.preventDefault()
       commitEdit()
-      moveEdit(ed, e.shiftKey ? -1 : 1, 0)
+      if (single) moveEdit(ed, e.shiftKey ? -1 : 1, 0)
     }
+  }
+
+  // The value shown in the edit box: the shared value, or empty when the files differ.
+  const editInitial = (key: string) => {
+    const ids = editingRef.current?.ids ?? []
+    const vals = new Set(rowsRef.current.filter(r => ids.includes(r.id)).map(r => val(r, key)))
+    return vals.size === 1 ? [...vals][0] : ''
   }
 
   const editor = (key: string, initial: string) => editing && (
     <EditInput key={editing.token} initial={initial} fieldKey={key} token={editing.token}
+      placeholder={editing.ids.length > 1 && !initial ? 'Mixed values · leave empty to keep them' : undefined}
+      count={editing.where === 'table' && editing.ids.length > 1 ? editing.ids.length : 0}
       valueRef={editValue} onKeyDown={onEditKey} onBlur={onEditBlur} />
   )
+
+  // Edit one column for every selected file at once (Alt+click or F2).
+  const lastCol = useRef<string | null>(null)
+  const bulkEdit = (key: string, first?: number) => {
+    const sel = selectedRef.current
+    const order = visibleRef.current.filter(r => sel.has(r.id)).map(r => r.id)
+    if (!order.length) return
+    const lead = first != null && sel.has(first) ? first : order[0]
+    lastCol.current = key
+    beginEdit([lead, ...order.filter(id => id !== lead)], key, 'table')
+  }
 
   /* ---------- Selection ---------- */
   const onCellMouseDown = (e: React.MouseEvent, row: Row, key: string | null) => {
@@ -173,6 +205,11 @@ export default function App() {
     e.preventDefault()
     commitEdit()
     const id = row.id
+    if (e.altKey && key && selectedRef.current.has(id) && selectedRef.current.size > 1) {
+      bulkEdit(key, id)
+      return
+    }
+    if (key) lastCol.current = key
     if (e.shiftKey && anchor.current != null) {
       const list = visibleRef.current
       const a = list.findIndex(r => r.id === anchor.current), b = list.findIndex(r => r.id === id)
@@ -356,6 +393,43 @@ export default function App() {
     }
   }
 
+  /* ---------- Rename from tags ---------- */
+  const openRename = () => {
+    if (busyRef.current || !selectedRef.current.size) return
+    commitEdit()
+    setRenaming(true)
+  }
+
+  const renameRows = async (items: RenameItem[], format: string) => {
+    if (busyRef.current) return
+    busyRef.current = true
+    setRenameFormat(format)
+    try { localStorage.setItem(FORMAT_KEY, format) } catch { /* not important */ }
+    let ok = 0
+    const failed: string[] = []
+    for (const [i, it] of items.entries()) {
+      setBusy(`Renaming ${i + 1} of ${items.length}…`)
+      const cur = rowsRef.current.find(r => r.id === it.id)
+      if (!cur) continue
+      try {
+        const t = await RenameFile(cur.track.path, it.name)
+        // Only the file's name and path change: unsaved tag edits stay as they are.
+        setRows(rs => rs.map(r => (r.id === it.id ? { ...r, track: { ...r.track, path: t.path, name: t.name, folder: t.folder, modified: t.modified } as Track } : r)))
+        ok++
+      } catch (e) {
+        failed.push(`${cur.track.name}: ${errorText(e)}`)
+      }
+    }
+    busyRef.current = false
+    setBusy(null)
+    setRenaming(false)
+    if (failed.length) {
+      showToast(`Renamed ${ok} of ${items.length}. Couldn't rename ${failed[0]}${failed.length > 1 ? ` (and ${failed.length - 1} more)` : ''}`, true)
+    } else {
+      showToast(`Renamed ${plural(ok, 'file')}.`)
+    }
+  }
+
   const revert = () => {
     commitEdit()
     const ids = selectedRef.current
@@ -389,17 +463,22 @@ export default function App() {
   }
 
   /* ---------- Keyboard + window ---------- */
-  const keys = useRef({ saveAll: () => saveRows(null), selectAll: () => {} })
+  const keys = useRef({ saveAll: () => saveRows(null), selectAll: () => {}, edit: () => {} })
   keys.current = {
     saveAll: () => saveRows(null),
     selectAll: () => setSelected(new Set(visibleRef.current.map(r => r.id))),
+    edit: () => {
+      if (busyRef.current || dialogOpen.current || !cols.length) return
+      bulkEdit(lastCol.current && cols.includes(lastCol.current) ? lastCol.current : cols[0])
+    },
   }
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const typing = /INPUT|SELECT|TEXTAREA/.test((e.target as HTMLElement).tagName)
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); keys.current.saveAll() }
       else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a' && !typing) { e.preventDefault(); keys.current.selectAll() }
-      else if (e.key === 'Escape') setDialog(false)
+      else if (e.key === 'F2' && !typing) { e.preventDefault(); keys.current.edit() }
+      else if (e.key === 'Escape' && !busyRef.current) { setDialog(false); setRenaming(false) }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -435,6 +514,10 @@ export default function App() {
           <button className="btn ghost" onClick={revert} disabled={!selDirty || !!busy} title="Undo unsaved changes on the selected files">
             <IconUndo />Revert
           </button>
+          <span className="sep" />
+          <button className="btn" onClick={openRename} disabled={!selected.size || !!busy} title="Rename the selected files using their tags">
+            <IconRename />Rename
+          </button>
           <span className="spacer" />
           <label className="search">
             <IconSearch />
@@ -450,7 +533,7 @@ export default function App() {
           <section className="panel table-panel" aria-label="Files">
             {rows.length ? (
               <FileTable rows={visible} cols={cols} selected={selected} editing={editing} sort={sort} filter={filter}
-                renderEditor={(r, k) => editor(k, val(r, k))} onCellMouseDown={onCellMouseDown} onSort={onSort} />
+                renderEditor={(_, k) => editor(k, editInitial(k))} onCellMouseDown={onCellMouseDown} onSort={onSort} />
             ) : (
               <div className="empty"><div className="empty-inner"><DropBlock onAddFolder={addFolder} onAddFiles={addFiles} disabled={!!busy} /></div></div>
             )}
@@ -496,6 +579,17 @@ export default function App() {
             {busy && !saving && <div className="dialog-busy">{busy}</div>}
           </div>
         </div>
+      )}
+
+      {renaming && (
+        <RenameDialog
+          rows={visible.filter(r => selected.has(r.id)).concat(targets.filter(r => !visible.includes(r)))}
+          otherPaths={new Set(rows.filter(r => !selected.has(r.id)).map(r => r.track.path.toLowerCase()))}
+          format={renameFormat}
+          busy={busy?.startsWith('Renaming') ? busy : null}
+          onClose={() => { if (!busyRef.current) setRenaming(false) }}
+          onRename={renameRows}
+        />
       )}
 
       <Toast toast={toast} onClose={closeToast} />

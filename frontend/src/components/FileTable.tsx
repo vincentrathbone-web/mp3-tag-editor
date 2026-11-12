@@ -45,8 +45,10 @@ export default function FileTable({ rows, cols, selected, editing, sort, filter,
                 </div>
               </td>
               {cols.map(k => {
-                const cls = [FIELD[k].kind, fieldChanged(r, k) ? 'changed' : ''].join(' ')
-                const isEditing = editing?.where === 'table' && editing.ids[0] === r.id && editing.key === k
+                const inTable = editing?.where === 'table' && editing.key === k
+                const isEditing = inTable && editing.ids[0] === r.id
+                const bulk = inTable && !isEditing && editing.ids.includes(r.id) // gets the same value
+                const cls = [FIELD[k].kind, fieldChanged(r, k) ? 'changed' : '', bulk ? 'bulk' : ''].join(' ')
                 const v = val(r, k)
                 return (
                   <td key={k} className={cls} onMouseDown={e => onCellMouseDown(e, r, k)}>

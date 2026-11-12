@@ -16,6 +16,8 @@ export function PickFiles():Promise<Array<main.Track>>;
 
 export function PickFolder():Promise<Array<main.Track>>;
 
+export function RenameFile(arg1:string,arg2:string):Promise<main.Track>;
+
 export function SaveTrack(arg1:main.SaveRequest):Promise<main.Track>;
 
 export function SetUnsavedCount(arg1:number):Promise<void>;

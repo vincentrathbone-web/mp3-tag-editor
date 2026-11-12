@@ -15,4 +15,5 @@ export const IconImage = (p: P) => <S {...p}><rect x="3" y="3" width="18" height
 export const IconClose = (p: P) => <S {...p}><path d="M6 6l12 12M18 6 6 18" /></S>
 export const IconSearch = (p: P) => <S {...p}><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></S>
 export const IconRows = (p: P) => <S {...p}><path d="M4 6h16M4 12h16M4 18h10" /></S>
+export const IconRename = (p: P) => <S {...p}><path d="M4 7h9M4 12h6M4 17h5" /><path d="m14 19 1-4 5-5 3 3-5 5z" /></S>
 export const IconWarn = (p: P) => <S {...p}><path d="M12 3 2 20h20z" /><path d="M12 10v4M12 17h.01" /></S>

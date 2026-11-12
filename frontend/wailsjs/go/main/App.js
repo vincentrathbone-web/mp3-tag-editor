@@ -30,6 +30,10 @@ export function PickFolder() {
   return window['go']['main']['App']['PickFolder']();
 }
 
+export function RenameFile(arg1, arg2) {
+  return window['go']['main']['App']['RenameFile'](arg1, arg2);
+}
+
 export function SaveTrack(arg1) {
   return window['go']['main']['App']['SaveTrack'](arg1);
 }

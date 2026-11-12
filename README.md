@@ -21,7 +21,8 @@ Edit ID3 tags in a spreadsheet-style table, drop in cover art from any image for
 
 - **Spreadsheet-style editing.** Click any cell to edit it. <kbd>Enter</kbd> moves down, <kbd>Tab</kbd> moves right, <kbd>Esc</kbd> cancels.
 - **All the fields.** Title, Artist and Album are shown by default. Turn on any of the 28 ID3 fields as a column: track, disc, year, genre, composer, BPM, key, lyrics and more.
-- **Edit many files at once.** Ctrl+click or Shift+click a whole album, then change a field or the cover for all of it. Fields that differ show as *Mixed values*.
+- **Edit many files at once.** Ctrl+click or Shift+click a whole album, then <kbd>Alt</kbd>+click a cell (or press <kbd>F2</kbd>) to give that column one value in every selected file. The side pane and the cover work for the whole selection too. Fields that differ show as *Mixed values*.
+- **Rename files from their tags.** Click **Rename**, type a pattern like `[Title] - [#] - [Artist]` and check the live preview before you click OK. `[#]` is the track number with two digits. The extension never changes, characters Windows doesn't allow are replaced, and name clashes are caught before anything is renamed.
 - **Cover art from any image.** Drop or pick AVIF, WebP, PNG, JPG, GIF, BMP or TIFF. It's converted to a **baseline JPEG of at most 500×500**, the format car stereos, phones and Windows all show.
 - **Everything about the file.** The side pane shows the cover, size, full path, duration, bitrate, sample rate, channels and every filled-in tag.
 - **Nothing changes until you save.** Edited values turn amber. Use **Save**, **Save all** (<kbd>Ctrl</kbd>+<kbd>S</kbd>) or **Revert**. Closing with unsaved changes asks first.
@@ -110,6 +111,7 @@ $env:MP3TE_SAMPLES_DIR = "D:\temp\mp3-samples"; go test -run TestMakeSamples .
 | <kbd>Ctrl</kbd>+<kbd>S</kbd> | Save all changed files |
 | <kbd>Ctrl</kbd>+<kbd>A</kbd> | Select all files in the list |
 | <kbd>Ctrl</kbd>+click / <kbd>Shift</kbd>+click | Add to the selection / select a range |
+| <kbd>Alt</kbd>+click a cell / <kbd>F2</kbd> | Edit that column for all selected files |
 
 ## Project layout
 
@@ -120,6 +122,8 @@ $env:MP3TE_SAMPLES_DIR = "D:\temp\mp3-samples"; go test -run TestMakeSamples .
 | `mpeg.go` | Duration, bitrate and sample rate from the audio (Xing, Info and VBRI aware) |
 | `cover.go` | Turns any supported image into the 500×500 JPEG cover |
 | `track.go` | Loads files and folders in parallel |
+| `rename.go` | Renames a file safely (checks Windows name rules and clashes) |
+| `frontend/src/rename.ts` | Turns a pattern like `[Title] - [#]` into new file names |
 | `fields.go` | The list of tag fields (keep it in step with `frontend/src/fields.ts`) |
 | `frontend/src` | The React + TypeScript screen |
 

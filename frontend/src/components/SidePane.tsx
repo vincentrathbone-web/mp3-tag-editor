@@ -87,6 +87,7 @@ export default function SidePane(p: Props) {
 
       <section>
         <div className="sh"><h3>Tags</h3><span>{shown.length} filled · click a value to edit</span></div>
+        {!one && <div className="tip">Tip: Alt+click a cell in the table, or press F2, to give one column the same value in all {t.length} files.</div>}
         <div className="tags">
           {shown.map(f => {
             const vals = new Set(t.map(r => val(r, f.key)))
